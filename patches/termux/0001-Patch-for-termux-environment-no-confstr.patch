@@ -1,0 +1,68 @@
+From ca683a805103f7f1b69f95f1033b6607fae1f2a6 Mon Sep 17 00:00:00 2001
+From: ngtv <tuanvy860@gmail.com>
+Date: Mon, 25 May 2026 10:45:46 +0700
+Subject: [PATCH] Patch for termux environment (no confstr)
+
+---
+ src/state/util.rs  | 10 ++++++----
+ src/util/compat.rs | 10 ++++++++++
+ src/util/mod.rs    |  1 +
+ 3 files changed, 17 insertions(+), 4 deletions(-)
+ create mode 100644 src/util/compat.rs
+
+diff --git a/src/state/util.rs b/src/state/util.rs
+index 7198e4c..37a8845 100644
+--- a/src/state/util.rs
++++ b/src/state/util.rs
+@@ -9,10 +9,9 @@ use std::{
+   sync::Arc,
+ };
+ 
+-use nix::{
+-  libc,
+-  unistd::{User, getuid},
+-};
++#[cfg(not(target_os = "android"))]
++use nix::libc;
++use nix::unistd::{User, getuid};
+ use rusqlite::Connection;
+ use scopeguard::defer;
+ use unicode_segmentation::UnicodeSegmentation;
+@@ -30,6 +29,9 @@ use super::{
+   vars::{ArrIndex, Var, VarFlags, VarKind},
+ };
+ 
++#[cfg(target_os = "android")]
++use crate::util::compat::libc; // override compatibility modules if exist for platform
++
+ /// Parse `arr[idx]` into (name, raw_index_expr). Pure parsing, no expansion.
+ pub fn parse_arr_bracket(var_name: &str) -> Option<(String, String)> {
+   let mut chars = var_name.chars();
+diff --git a/src/util/compat.rs b/src/util/compat.rs
+new file mode 100644
+index 0000000..73cbe3c
+--- /dev/null
++++ b/src/util/compat.rs
+@@ -0,0 +1,10 @@
++#[cfg(target_os = "android")]
++/// extend nix libc to be compatible on Android
++pub mod libc {
++  #[allow(unused_imports)]
++  use nix::libc::*;
++  pub const _CS_PATH: i32 = 1;
++  pub unsafe fn confstr(_name: i32, _buf: *mut u8, _len: usize) -> usize {
++    0
++  }
++}
+diff --git a/src/util/mod.rs b/src/util/mod.rs
+index 682d6b6..498519c 100644
+--- a/src/util/mod.rs
++++ b/src/util/mod.rs
+@@ -1,3 +1,4 @@
++pub mod compat;
+ mod error;
+ pub mod flog;
+ mod guards;
+-- 
+2.54.0
+
