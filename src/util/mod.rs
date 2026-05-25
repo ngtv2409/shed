@@ -1,3 +1,4 @@
+pub mod compat;
 mod error;
 pub mod flog;
 mod guards;

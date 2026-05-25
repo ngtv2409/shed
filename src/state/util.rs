@@ -9,10 +9,9 @@ use std::{
   sync::Arc,
 };
 
-use nix::{
-  libc,
-  unistd::{User, getuid},
-};
+#[cfg(not(target_os = "android"))]
+use nix::libc;
+use nix::unistd::{User, getuid};
 use rusqlite::Connection;
 use scopeguard::defer;
 use unicode_segmentation::UnicodeSegmentation;
@@ -29,6 +28,9 @@ use super::{
   shopt::ShOpts,
   vars::{ArrIndex, Var, VarFlags, VarKind},
 };
+
+#[cfg(target_os = "android")]
+use crate::util::compat::libc; // override compatibility modules if exist for platform
 
 /// Parse `arr[idx]` into (name, raw_index_expr). Pure parsing, no expansion.
 pub fn parse_arr_bracket(var_name: &str) -> Option<(String, String)> {
